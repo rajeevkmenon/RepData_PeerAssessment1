@@ -1,0 +1,97 @@
+---
+title: "ReproducibleResearch"
+author: "Rajeev Menon"
+date: "Sunday, April 10, 2016"
+output: html_document
+---
+
+This is an R Markdown document created for the Reproducible Research course. For the first week project, we will load and process the movement activity recorded by monitoring devices.
+
+As the first step, we need to load the activity file provided and display a summary of how it looks. See code:
+
+```{r, echo=TRUE}
+data <- read.csv("activity.csv")
+summary(data)
+```
+
+Since most of the required processing are based on the date column, we will make sure that this column is in right format:
+
+```{r, echo=TRUE}
+data$date <- as.Date(data$date)
+```
+
+At this point, we are ready to process. We need to aggregate the steps taken (provided in activity file) by the days. We need this to calculate mean as requested. Then, we need to display the histogram of the aggregate to show data by day.
+
+```{r, echo=TRUE}
+stepsnotimp <- aggregate(steps~cut(date, "day"), data=data, FUN=sum)
+hist(stepsnotimp$steps)
+```
+
+Mean and median values of the total steps taken per day are calculated 
+
+```{r, echo=TRUE}
+meannonimputed <- mean(stepsnotimp$steps)
+meannonimputed
+mediannonimputed <- median(stepsnotimp$steps)
+mediannonimputed
+```
+
+We used the spread method in tidyr package to create the intervals and plot the daily activity at 5 minute intervals.
+
+```{r, echo=TRUE}
+require(tidyr)
+stepintervals <- spread(data, interval, steps)
+stepintervals <- stepintervals[-1]
+stepmeanvals <- colMeans(stepintervals, na.rm = TRUE)
+plot(stepmeanvals, type="l", xlab="Interval", ylab="Daily Steps", main="Activity By Day")
+```
+
+Now the averages that contain maximum number of steps are:
+
+```{r, echo=TRUE}
+which.max(stepmeanvals) 
+```
+
+If you carefully look at the summary information of data loaded, you will see that there are 2304 N/As. 
+
+I have decided to use column mean values to impute missing values on the column. First, we will make a copy of the non-imputed data and then replace the N/As in the new copy. That is done as follows:
+
+```{r, echo=TRUE}
+imputeddata <- data
+for(i in 1:ncol(data)){
+  imputeddata[is.na(imputeddata[,i]), i] <- mean(imputeddata[,i], na.rm = TRUE)
+}
+summary(imputeddata)
+```
+
+As you can see from the summary ablve that the NAs are gone. Now display the histogram from the imputed data for steps by day aggregate. 
+
+```{r, echo=TRUE}
+stepsimputed <- aggregate(steps~cut(date, "day"), data=imputeddata, FUN=sum)
+hist(stepsimputed$steps)
+```
+
+Lets calculate the man and median now as follows:
+
+```{r, echo=TRUE}
+meanimputed <- mean(stepsimputed$steps)
+meanimputed
+medianimputed <- median(stepsimputed$steps)
+medianimputed
+```
+
+As you can see the mean and median values are same on the imputed data. The column mean did not affect the final results much.
+
+To start working on the day of week results, lets add a two columns to the dataset to identify if it is a weekend and then to store the factor. We will then use the factor data to split data into two levels:
+
+```{r, echo=TRUE}
+imputeddata$weekend <- chron::is.weekend(imputeddata$date)
+imputeddata$factor <- as.factor(imputeddata$weekend)
+
+levels(imputeddata$factor)=c("weekday","weekend")
+```
+
+
+
+
+
